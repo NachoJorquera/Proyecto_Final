@@ -1,4 +1,5 @@
 import time
+import os
 import csv
 from datetime import date
 from bs4 import BeautifulSoup
@@ -167,6 +168,19 @@ def main(L_FIND):
                     if B_VERBOSE_DEBUG:
                         print(listResult[len(listResult) - 1])
 
+                    #Grabar en archivo CSV
+                    multitienda = 'Falabella'
+                    descripcion = listResult[-1]['nombre']
+                    precio_clp = float(listResult[-1]['precio'])
+                    precio_uf = precio_clp / valor_uf
+
+                    with open('todosolo.csv', 'a', newline='') as archivo_csv:
+                        escritor_csv = csv.writer(archivo_csv, delimiter=';')
+
+                        if archivo_csv.tell() == 0:
+                            escritor_csv.writerow(['Patron de búsqueda', 'Multitienda', 'Descripción', 'Precio CLP', 'Precio UF'])
+                        escritor_csv.writerow([S_FIND, multitienda, descripcion, int(precio_clp), round(precio_uf, 2)])
+
                 try:
                     sXpath = '//*[@id="testId-pagination-bottom-arrow-right"]/i'
                     contentData = driver.find_element(By.XPATH, sXpath)
@@ -210,10 +224,9 @@ def main(L_FIND):
 
 if (__name__ == '__main__'):
     obtener_uf()
+    valor_uf = obtener_uf()
     if len(sys.argv) > 1:
         file_path = sys.argv[1]
         runScript(file_path)
     else:
         print("Debe proporcionar la ruta del archivo txt con los patrones de búsqueda.")
-
-    
