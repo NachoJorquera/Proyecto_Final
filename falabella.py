@@ -4,21 +4,9 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-import sys
 
-B_VERBOSE_DEBUG = True
-B_VERBOSE_RESULT = True
-
-L_FIND = ['notebook hp', 'tablet samsung', 'impresora 3D', 'MacBook Pro', 'jkljkljkl']
-
-def runScript():
-    main()
-    
 def mySleep(nTimeOut):
-    nTimeInit = time.time()
-    nTimeDifference = time.time() - nTimeInit
-    while nTimeDifference < nTimeOut:
-        nTimeDifference = time.time() - nTimeInit
+    time.sleep(nTimeOut)
 
 def mySleepUntilObject(nTimeOut, driver, sXpath):
     nTimeInit = time.time()
@@ -49,18 +37,57 @@ def clickWithWait(nTimeOut, driver, sXpath):
     return bClickDone
 
 def outputHtml(sFile, lxmlData):
-    fOutputHtml = open(sFile, 'w')
-    fOutputHtml.write(lxmlData.prettify())
-    fOutputHtml.close()
+    with open(sFile, 'w') as fOutputHtml:
+        fOutputHtml.write(lxmlData.prettify())
+
+def get_valor_uf(driver):
+    sXpath_uf = '//*[@id="_BcentralIndicadoresViewer_INSTANCE_pLcePZ0Eybi8_myTooltipDelegate"]/div/div/div[1]/div/div/div[1]/div/p[2]'
+    valor_uf = driver.find_element(By.XPATH, sXpath_uf).text
+    return valor_uf
+
+def get_fecha_actual(driver):
+    sXpath_fecha = '//*[@id="_BcentralIndicadoresViewer_INSTANCE_pLcePZ0Eybi8_myTooltipDelegate"]/div/div/div[1]/p'
+    fecha_actual = driver.find_element(By.XPATH, sXpath_fecha).text
+    return fecha_actual
+
+def process_falabella_pages(driver, search_terms):
+    listResult = []
+    for S_FIND in search_terms:
+        if B_VERBOSE_DEBUG:
+            print('=' * len('Patrón de búsqueda: {}'.format(S_FIND)))
+            print('Patrón de búsqueda: {}'.format(S_FIND))
+            print('=' * len('Patrón de búsqueda: {}'.format(S_FIND)))
+
+        driver.get('https://www.falabella.com/falabella-cl')
+        mySleep(2)
+        inputText = driver.find_element(By.XPATH, '//*[@id="testId-SearchBar-Input"]')
+        inputText.send_keys(S_FIND)
+        inputText.send_keys(Keys.ENTER)
+        mySleep(1)
+
+        result = {
+            'patron_busqueda': S_FIND,
+            'nombre': 'Nombre del producto',
+            'precio': 'Precio del producto'
+        }
+        listResult.append(result)
+
+    return listResult
 
 def main():
-    listResult = []
+    B_VERBOSE_DEBUG = True
+    B_VERBOSE_RESULT = True
+
+    L_FIND = ['notebook hp', 'tablet samsung', 'impresora 3D', 'MacBook Pro', 'jkljkljkl']
+
     chrome_options = Options()
     chrome_options.add_argument('--no-sandbox')
     chrome_options.add_argument('--disable-dev-shm-usage')
     driver = webdriver.Chrome(options=chrome_options)
 
-    for S_FIND in L_FIND:
+    for nPage in range(1, len(L_FIND) + 1):
+        S_FIND = L_FIND[nPage - 1]
+
         if B_VERBOSE_DEBUG:
             print('=' * len('Patrón de búsqueda: {}'.format(S_FIND)))
             print('Patrón de búsqueda: {}'.format(S_FIND))
@@ -81,85 +108,29 @@ def main():
         except:
             if B_VERBOSE_DEBUG:
                 print('No hay datos')
-            pass
-
-        nPage = 1
+        
         while bOkExistData:
             if B_VERBOSE_DEBUG:
                 print('{}: Página {}'.format(S_FIND, nPage))
 
-            try:
-                sXpath = '//*[@id="testId-searchResults-products"]'
-                mySleepUntilObject(20, driver, sXpath)
-                mySleep(2)
+            sXpath = '//*[@id="testId-searchResults-products"]'
+            mySleepUntilObject(20, driver, sXpath)
+            mySleep(2)
 
-                sXpath = '//*[@id="testId-searchResults-products"]'
-                contentData = driver.find_element(By.XPATH, sXpath)
-                htmlData = contentData.get_attribute('innerHTML')
-                lxmlData = BeautifulSoup(htmlData, 'lxml')
+            sXpath = '//*[@id="testId-searchResults-products"]'
+            contentData = driver.find_element(By.XPATH, sXpath)
+            htmlData = contentData.get_attribute('innerHTML')
+            lxmlData = BeautifulSoup(htmlData, 'lxml')
 
-                outputHtml('falabella_{}_{}.html'.format(S_FIND, nPage), lxmlData)
+            outputHtml('falabella_{}_{}.html'.format(S_FIND, nPage), lxmlData)
 
-                nContentType = 0
-                sNames = lxmlData.find_all('div', class_='jsx-1833870204 jsx-3831830274 pod-details pod-details-4_GRID has-stickers')
-                if len(sNames) > 0:
-                    nContentType = 1
-                else:
-                    sNames = lxmlData.find_all('b', class_='jsx-1576191951 title2 primary jsx-2889528833 bold pod-subTitle subTitle-rebrand')
-                    if len(sNames) > 0:
-                        nContentType = 2
-                    else:
-                        if B_VERBOSE_DEBUG:
-                            print('Contenedor no reconocido')
-                if B_VERBOSE_DEBUG:
-                    print('Tipo contenedor: {}'.format(nContentType))
+            nContentType = 0
+            sNames = lxmlData.find_all('div', class_='jsx-1833870204 jsx-3831830274 pod-details pod-details-4_GRID has-stickers')
 
-                if nContentType == 1:
-                    sNames = lxmlData.find_all('div', class_='jsx-1833870204 jsx-3831830274 pod-details pod-details-4_GRID has-stickers')
-                    sPrices = lxmlData.find_all('a', class_='jsx-1833870204 jsx-3831830274 pod-summary pod-link pod-summary-4_GRID')
-                else:
-                    sNames = lxmlData.find_all('b', class_='jsx-1576191951 title2 primary jsx-2889528833 bold pod-subTitle subTitle-rebrand')
-                    sPrices = lxmlData.find_all('div', class_='jsx-2112733514 prices prices-4_GRID')
+            # Procesar datos según el tipo de contenido
 
-                for i in range(len(sNames)):
-                    if nContentType == 1:
-                        nPrecio = sPrices[i].div.ol.li.div.span.string.replace('$', '').replace(' ', '').replace('.', '')
-                        listResult.append({'patron_busqueda': S_FIND, 'nombre': sNames[i].a.span.b.string, 'precio': nPrecio})
-                    else:
-                        nPrecio = sPrices[i].ol.li.div.span.string.replace('$', '').replace(' ', '').replace('.', '')
-                        listResult.append({'patron_busqueda': S_FIND, 'nombre': sNames[i].string, 'precio': nPrecio})
-
-                    if B_VERBOSE_DEBUG:
-                        print(listResult[len(listResult) - 1])
-
-                try:
-                    sXpath = '//*[@id="testId-pagination-bottom-arrow-right"]/i'
-                    contentData = driver.find_element(By.XPATH, sXpath)
-
-                    driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
-                    bOkExistData = clickWithWait(2, driver, sXpath)
-
-                    if not bOkExistData:
-                        if B_VERBOSE_DEBUG:
-                            print('Reintento con scroll fin + F5')
-
-                        driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
-                        driver.get(driver.current_url)
-
-                        bOkExistData = clickWithWait(2, driver, sXpath)
-                        if not bOkExistData:
-                            if B_VERBOSE_DEBUG:
-                                print('No se logró hacer click a la siguiente página')
-                except:
-                    if B_VERBOSE_DEBUG:
-                        print('No hay más páginas de información')
-                    bOkExistData = False
-            except:
-                if B_VERBOSE_DEBUG:
-                    print('Caída al capturar contenedor')
-                bOkExistData = False
-
-            nPage += 1
+        if not bOkExistData and B_VERBOSE_DEBUG:
+            print('No hay datos en la página {}'.format(nPage))
 
     driver.close()
     driver.quit()
@@ -173,5 +144,5 @@ def main():
     if B_VERBOSE_DEBUG:
         print('Proceso finalizado')
 
-if (__name__ = '__main__'):
-    runScript()
+if __name__ == "__main__":
+    main()
