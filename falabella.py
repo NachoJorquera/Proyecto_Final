@@ -172,3 +172,6 @@ def main():
 
     if B_VERBOSE_DEBUG:
         print('Proceso finalizado')
+
+if (__name__ = '__main__'):
+    runScript()
