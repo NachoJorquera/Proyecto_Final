@@ -134,8 +134,6 @@ def main(L_FIND):
                 htmlData = contentData.get_attribute('innerHTML')
                 lxmlData = BeautifulSoup(htmlData, 'lxml')
 
-                outputHtml('falabella_{}_{}.html'.format(S_FIND, nPage), lxmlData)
-
                 nContentType = 0
                 sNames = lxmlData.find_all('div', class_='jsx-1833870204 jsx-3831830274 pod-details pod-details-4_GRID has-stickers')
                 if len(sNames) > 0:
@@ -223,10 +221,11 @@ def main(L_FIND):
         print('Proceso finalizado')
 
 if (__name__ == '__main__'):
-    obtener_uf()
     valor_uf = obtener_uf()
     if len(sys.argv) > 1:
         file_path = sys.argv[1]
         runScript(file_path)
     else:
         print("Debe proporcionar la ruta del archivo txt con los patrones de búsqueda.")
+
+    
